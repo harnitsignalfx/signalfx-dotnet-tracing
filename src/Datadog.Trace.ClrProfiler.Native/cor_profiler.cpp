@@ -19,6 +19,7 @@
 #include "sig_helpers.h"
 #include "resource.h"
 #include "util.h"
+#include "ThreadSampler.h"
 
 namespace trace {
 
@@ -29,6 +30,7 @@ CorProfiler* profiler = nullptr;
 //
 HRESULT STDMETHODCALLTYPE
 CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
+  this->threadSampler = NULL;
   // check if debug mode is enabled
   const auto debug_enabled_value =
       GetEnvironmentValue(environment::debug_enabled);
@@ -167,6 +169,12 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
     Info("Disabling all code optimizations.");
     event_mask |= COR_PRF_DISABLE_OPTIMIZATIONS;
   }
+  // FIXME JBLEY make this a config attribute
+#define ENABLE_THREAD_SAMPLES 1
+  if (ENABLE_THREAD_SAMPLES) {
+    event_mask |= COR_PRF_MONITOR_THREADS | COR_PRF_ENABLE_STACK_SNAPSHOT |
+                  COR_PRF_MONITOR_THREADS;
+  }
 
   const WSTRING domain_neutral_instrumentation =
       GetEnvironmentValue(environment::domain_neutral_instrumentation);
@@ -189,6 +197,10 @@ CorProfiler::Initialize(IUnknown* cor_profiler_info_unknown) {
   }
 
   runtime_information_ = GetRuntimeInformation(this->info_);
+  if (ENABLE_THREAD_SAMPLES) {
+    this->threadSampler = new ThreadSampler(); // FIXME JBLEY leaked currently
+    this->threadSampler->StartSampling(this->info_);
+  }
 
   // we're in!
   Info("Profiler attached.");
@@ -1770,4 +1782,37 @@ void CorProfiler::GetAssemblyAndSymbolsBytes(BYTE** pAssemblyArray, int* assembl
 #endif
   return;
 }
+
+HRESULT STDMETHODCALLTYPE CorProfiler::ThreadCreated(ThreadID threadId) {
+  if (threadSampler != NULL) {
+    threadSampler->ThreadCreated(threadId);
+  }
+  return S_OK;
+}
+HRESULT STDMETHODCALLTYPE CorProfiler::ThreadDestroyed(ThreadID threadId) {
+  if (threadSampler != NULL) {
+    threadSampler->ThreadDestroyed(threadId);
+  }
+  return S_OK;
+}
+HRESULT STDMETHODCALLTYPE CorProfiler::ThreadAssignedToOSThread(
+    ThreadID managedThreadId,
+    DWORD osThreadId) {
+  if (threadSampler != NULL) {
+    threadSampler->ThreadAssignedToOSThread(managedThreadId, osThreadId);
+  }
+  return S_OK;
+
+}
+HRESULT STDMETHODCALLTYPE CorProfiler::ThreadNameChanged(ThreadID threadId,
+    ULONG cchName,
+    WCHAR name[]) {
+  if (threadSampler != NULL) {
+    threadSampler->ThreadNameChanged(threadId, cchName, name);
+  }
+
+  return S_OK;
+}
+
+
 }  // namespace trace

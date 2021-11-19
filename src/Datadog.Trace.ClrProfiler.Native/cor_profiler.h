@@ -16,6 +16,8 @@
 
 namespace trace {
 
+class ThreadSampler;
+
 class CorProfiler : public CorProfilerBase {
  private:
   bool is_attached_ = false;
@@ -32,6 +34,8 @@ class CorProfiler : public CorProfilerBase {
   std::unordered_set<AppDomainID> managed_profiler_loaded_app_domains;
   std::unordered_set<AppDomainID> first_jit_compilation_app_domains;
   bool in_azure_app_services = false;
+  ThreadSampler* threadSampler;
+  
 
   //
   // Module helper variables
@@ -95,6 +99,14 @@ class CorProfiler : public CorProfilerBase {
   JITCompilationStarted(FunctionID function_id, BOOL is_safe_to_block) override;
 
   HRESULT STDMETHODCALLTYPE Shutdown() override;
+
+  // Used for ThreadSampler
+  HRESULT STDMETHODCALLTYPE ThreadCreated(ThreadID threadId) override;
+  HRESULT STDMETHODCALLTYPE ThreadDestroyed(ThreadID threadId) override;
+  HRESULT STDMETHODCALLTYPE ThreadAssignedToOSThread(ThreadID managedThreadId,
+                                                     DWORD osThreadId) override;
+  HRESULT STDMETHODCALLTYPE ThreadNameChanged(ThreadID threadId, ULONG cchName,
+                                              WCHAR name[]) override;
 };
 
 // Note: Generally you should not have a single, global callback implementation,

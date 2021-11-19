@@ -163,6 +163,7 @@
     <ClInclude Include="pal.h" />
     <ClInclude Include="sig_helpers.h" />
     <ClInclude Include="string.h" />
+    <ClInclude Include="ThreadSampler.h" />
     <ClInclude Include="util.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
@@ -180,6 +181,7 @@
     <ClCompile Include="miniutf.cpp" />
     <ClCompile Include="sig_helpers.cpp" />
     <ClCompile Include="string.cpp" />
+    <ClCompile Include="ThreadSampler.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>
